@@ -81,7 +81,7 @@ const Game = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/api/save-game', gameData);
+      const response = await axios.post('/api/save-game', gameData);
       console.log('Game data saved:', response.data);
     } catch (error) {
       console.error('Error saving game data:', error);
