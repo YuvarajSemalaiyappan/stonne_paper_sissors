@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Game = () => {
-  const [player1Name, setPlayer1Name] = useState('');
-  const [player2Name, setPlayer2Name] = useState('');
-  const [player1Choice, setPlayer1Choice] = useState('');
-  const [player2Choice, setPlayer2Choice] = useState('');
-  const [rounds, setRounds] = useState([]);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [gameOver, setGameOver] = useState(false);
-  const [isGameStarted, setIsGameStarted] = useState(false);
-  const [player1Wins, setPlayer1Wins] = useState(0);
-  const [player2Wins, setPlayer2Wins] = useState(0);
+  const dispatch = useDispatch();
+  const {
+    player1Name,
+    player2Name,
+    player1Choice,
+    player2Choice,
+    rounds,
+    currentRound,
+    gameOver,
+    isGameStarted,
+    player1Wins,
+    player2Wins,
+  } = useSelector((state) => state.game);
   const navigate = useNavigate();
-
 
   const determineWinner = (choice1, choice2) => {
     if (choice1 === choice2) return 'tie';
@@ -29,46 +32,40 @@ const Game = () => {
     }
   };
 
-
   const handleChoices = () => {
     const winner = determineWinner(player1Choice, player2Choice);
-    setRounds([...rounds, { player1Choice, player2Choice, winner }]);
+    
+    dispatch({
+      type: 'ADD_ROUND',
+      payload: {
+        round: { player1Choice, player2Choice, winner },
+        winner,
+      },
+    });
 
-
-    if (winner === 'player1') {
-      setPlayer1Wins(player1Wins + 1);
-    } else if (winner === 'player2') {
-      setPlayer2Wins(player2Wins + 1);
-    }
-
+ 
     if (currentRound === 6) {
-      setGameOver(true);
-      saveGameData();
+      dispatch({ type: 'END_GAME' });
     } else {
-      setCurrentRound(currentRound + 1);
-      setPlayer1Choice('');
-      setPlayer2Choice('');
+      dispatch({ type: 'INCREMENT_ROUND' });
     }
   };
-
 
   const startGame = () => {
     if (player1Name && player2Name) {
-      setIsGameStarted(true);
+      dispatch({ type: 'START_GAME' });
     }
   };
 
-
-  const getOverallWinner = () => {
-    if (player1Wins > player2Wins) {
-      return player1Name;
-    } else if (player2Wins > player1Wins) {
-      return player2Name;
-    } else {
-      return 'It\'s a tie!';
-    }
+  const handleNameChange = (player, value) => {
+    dispatch({
+      type: 'SET_PLAYER_NAMES',
+      payload: {
+        player1Name: player === 'player1' ? value : player1Name,
+        player2Name: player === 'player2' ? value : player2Name,
+      },
+    });
   };
-
 
   const saveGameData = async () => {
     const gameData = {
@@ -88,6 +85,23 @@ const Game = () => {
     }
   };
 
+  const getOverallWinner = () => {
+    if (player1Wins > player2Wins) {
+      return player1Name;
+    } else if (player2Wins > player1Wins) {
+      return player2Name;
+    } else {
+      return 'It\'s a tie!';
+    }
+  };
+
+
+  React.useEffect(() => {
+    if (gameOver) {
+      saveGameData();
+    }
+  }, [gameOver]); 
+
   return (
     <div>
       <h1>Stone Paper Scissors Game</h1>
@@ -99,23 +113,21 @@ const Game = () => {
             <input
               type="text"
               value={player1Name}
-              onChange={(e) => setPlayer1Name(e.target.value)}
+              onChange={(e) => handleNameChange('player1', e.target.value)}
               placeholder="Enter Player 1 Name"
             />
           </label>
           <br />
-
           <label>
             Player 2 Name:
             <input
               type="text"
               value={player2Name}
-              onChange={(e) => setPlayer2Name(e.target.value)}
+              onChange={(e) => handleNameChange('player2', e.target.value)}
               placeholder="Enter Player 2 Name"
             />
           </label>
           <br />
-
           <button onClick={startGame} disabled={!player1Name || !player2Name}>
             Start Game
           </button>
@@ -127,15 +139,27 @@ const Game = () => {
           <p>Player 2: {player2Name}</p>
 
           <h3>{player1Name}'s Turn</h3>
-          <button onClick={() => setPlayer1Choice('stone')}>Stone</button>
-          <button onClick={() => setPlayer1Choice('paper')}>Paper</button>
-          <button onClick={() => setPlayer1Choice('scissors')}>Scissors</button>
+          <button onClick={() => dispatch({ type: 'SET_CHOICES', payload: { player1Choice: 'stone' } })}>
+            Stone
+          </button>
+          <button onClick={() => dispatch({ type: 'SET_CHOICES', payload: { player1Choice: 'paper' } })}>
+            Paper
+          </button>
+          <button onClick={() => dispatch({ type: 'SET_CHOICES', payload: { player1Choice: 'scissors' } })}>
+            Scissors
+          </button>
           <p>Player 1 Choice: {player1Choice}</p>
 
           <h3>{player2Name}'s Turn</h3>
-          <button onClick={() => setPlayer2Choice('stone')}>Stone</button>
-          <button onClick={() => setPlayer2Choice('paper')}>Paper</button>
-          <button onClick={() => setPlayer2Choice('scissors')}>Scissors</button>
+          <button onClick={() => dispatch({ type: 'SET_CHOICES', payload: { player2Choice: 'stone' } })}>
+            Stone
+          </button>
+          <button onClick={() => dispatch({ type: 'SET_CHOICES', payload: { player2Choice: 'paper' } })}>
+            Paper
+          </button>
+          <button onClick={() => dispatch({ type: 'SET_CHOICES', payload: { player2Choice: 'scissors' } })}>
+            Scissors
+          </button>
           <p>Player 2 Choice: {player2Choice}</p>
 
           <button onClick={handleChoices} disabled={!player1Choice || !player2Choice}>
