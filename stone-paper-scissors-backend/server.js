@@ -1,33 +1,64 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const { Sequelize, DataTypes } = require('sequelize');
+
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
 
-mongoose.connect(process.env.MONGO_URI).then(() => console.log('MongoDB connected')).catch(err => console.log(err));
-
-const gameSchema = new mongoose.Schema({
-  player1Name: String,
-  player2Name: String,
-  rounds: [{ player1Choice: String, player2Choice: String, winner: String }],
-  player1Score: Number,
-  player2Score: Number,
-  winner: String,
+const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false 
+    }
+  }
 });
 
-const Game = mongoose.model('Game', gameSchema);
 
+const Game = sequelize.define('Game', {
+  player1Name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  player2Name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  rounds: {
+    type: DataTypes.JSONB,
+    allowNull: false
+  },
+  player1Score: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  player2Score: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  winner: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+});
+
+
+sequelize.sync()
+  .then(() => console.log('PostgreSQL connected and tables created'))
+  .catch(err => console.log('Error connecting to PostgreSQL:', err));
 
 app.post('/api/save-game', async (req, res) => {
-  const newGame = new Game(req.body);
   try {
-    await newGame.save();
+    const newGame = await Game.create(req.body);
     res.status(201).json(newGame);
   } catch (error) {
     res.status(400).json({ message: 'Error saving game', error });
@@ -36,7 +67,7 @@ app.post('/api/save-game', async (req, res) => {
 
 app.get('/api/games', async (req, res) => {
   try {
-    const games = await Game.find();
+    const games = await Game.findAll();
     res.json(games);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving games', error });
